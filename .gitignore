@@ -1,0 +1,17 @@
+# R stuff
+*.Rhistory
+*.RData
+
+# Rmarkdown
+*.html
+
+# Logs
+*.log
+
+# Data folders
+data/
+output/
+
+# OS junk
+.DS_Store
+Thumbs.db
