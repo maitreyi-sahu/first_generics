@@ -4,6 +4,7 @@
 
 # Rmarkdown
 *.html
+*.png
 
 # Logs
 *.log

@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # ------------------------------------------------------------------------------
 
-pacman::p_load(readxl, data.table, dplyr, ggplot2, knitr)
+pacman::p_load(readxl, data.table, dplyr, ggplot2, knitr, lubridate)
 
 user_name <- 'MS3390' # UPDATE TO YOUR USERNAME
 
@@ -272,4 +272,11 @@ make_boxplot(first_generic_agg, "L1_name", "ATC Level 1 Class")
 # 4) By Approval Decade
 make_boxplot(first_generic_agg, "approval_decade", "Approval Decade")
 ```
+```{r boxplot-loe-loss, fig.width=8, fig.height=0.3 * length(unique(first_generic_agg$loe_loss_year))} 
 
+# Create LOE loss year
+first_generic_agg[, loe_loss_year := year(first_date)]
+
+# Boxplot by LOE loss year
+make_boxplot(first_generic_agg, "loe_loss_year", "Year of Exclusivity Loss")
+```
