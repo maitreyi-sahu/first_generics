@@ -1,0 +1,236 @@
+---
+title: "First generic entry - data exploration"
+author: "Maitreyi"
+format: html
+editor: visual
+---
+
+## New drugs (INCLUDE == T)
+
+```{r setup, include = F}
+# ------------------------------------------------------------------------------
+
+pacman::p_load(readxl, data.table, dplyr, ggplot2, knitr, lubridate)
+
+user_name <- 'MS3390' # UPDATE TO YOUR USERNAME
+
+if (Sys.info()["sysname"] == "Darwin") {
+  # Mac
+  dir <- paste0("/Users/", user_name, "/Library/CloudStorage/Dropbox/Partners HealthCare Dropbox/Maitreyi Sahu/projects/first_generics/data/")
+} else {
+  # Windows
+  dir <- paste0("C:/Users/", user_name, "/Partners HealthCare Dropbox/Maitreyi Sahu/projects/first_generics/data/")
+}
+
+# atc hierarchy
+atc_names <- fread(paste0(dir, 'processed/atc/WHO_ATC_hierarchy_2024.csv'))
+setnames(atc_names, "atc_code", "atc")
+
+# load generic entry dataset (from Ben)
+first_generic <- read_excel(paste0(dir, 'First Generic Dates All 9.26.2025.xlsx')) 
+first_generic_new <- read_excel(paste0(dir, 'First Generic Dates - New Drugs 2014-2024 9.26.2025_v2.xlsx')) %>% 
+  left_join(atc_names, by = 'atc') %>% setDT() %>% 
+  # drop vials 
+  filter(INCLUDE == 1)
+
+# load new approvals (from FDA)
+# all_approvals <- fread(paste0(dir, 'raw/fda/final for posting compilation_of_cder_nme_and_new_biologic_approvals_1985-2024.csv'))
+
+# ------------------------------------------------------------------------------
+
+# PLOTTING FUNCTION
+
+big_plot_theme <- function(base_size = 24) {
+  theme_minimal(base_size = base_size) +
+    theme(
+      legend.position = "bottom",
+      legend.text = element_text(size = base_size),
+      legend.title = element_text(size = base_size),
+      axis.text = element_text(size = base_size),
+      axis.title = element_text(size = base_size),
+      plot.title = element_text(size = base_size + 4, face = "bold")
+    )
+}
+```
+
+# Summary table
+
+```{r summary-table, echo=FALSE}
+library(data.table)
+
+# Overall totals and average LOE
+overall <- first_generic_new[, .(
+  n_total = .N,
+  mean_LOE = mean(LOE, na.rm = TRUE)
+)]
+
+# By class
+by_class <- first_generic_new[, .(
+  n = .N,
+  mean_LOE = mean(LOE, na.rm = TRUE)
+), by = L1_name][order(-n)]
+
+# By dosage form
+by_dose <- first_generic_new[, .(
+  n = .N,
+  mean_LOE = mean(LOE, na.rm = TRUE)
+), by = dose][order(-n)]
+
+# Combine for display
+kable(overall, caption = "Overall totals and average LOE, after dropping vials ('Include == T')")
+kable(by_class, caption = "Totals and average LOE by ATC Level 1 Class")
+kable(by_dose, caption = "Totals and average LOE by dosage form")
+
+rm(overall, by_dose)
+```
+
+# Density plots of time to generic entry
+
+```{r, fig.height = 16, fig.width = 26, dpi = 200, echo = F, warning = F}
+# Overall
+ggplot(first_generic_new, aes(x = LOE)) +
+  geom_density(fill = "steelblue", alpha = 0.4) +
+  labs(
+    title = "Time to first generic entry",
+    x = "Years to any first generic (LOE)",
+    y = "Density"
+  ) +
+  big_plot_theme()
+
+# By ATC level 1
+ggplot(first_generic_new, aes(x = LOE, fill = L1_name)) +
+  geom_density(alpha = 0.4) +
+  labs(
+    title = "Time to First Generic Entry by ATC Level 1 Class",
+    x = "Years to First Generic (LOE)",
+    y = "Density",
+    fill = "ATC L1"
+  ) +
+  big_plot_theme() +
+  theme(legend.position = "bottom") +
+  guides(fill = guide_legend(nrow = 6, byrow = TRUE))
+
+# By company
+ggplot(first_generic_new, aes(x = LOE, fill = b_fda_sponsor)) +
+  geom_density(alpha = 0.4) +
+  labs(
+    title = "Time to First Generic Entry by Brand Manufacturer",
+    x = "Years to First Generic (LOE)",
+    y = "Density",
+    fill = "b_fda_sponsor"
+  ) +
+  big_plot_theme() +
+  theme(legend.position = "bottom") +
+  guides(fill = guide_legend(nrow = 8, byrow = TRUE))
+```
+
+## Long Exclusivity Drugs (\>30 years)
+
+```{r long-LOE-table, echo=FALSE}
+library(data.table)
+
+# Filter and order
+long_excl <- first_generic_new[LOE > 30, .(
+  brand,
+  generic,
+  atc,
+  LOE,
+  b_fda_approval,
+  b_market_date, 
+  dose_g_first
+)][order(-LOE)]
+
+# Display table
+library(knitr)
+kable(long_excl, caption = "Drugs with >30 Years Between Brand Approval and First Generic Entry")
+```
+
+# Stacked bars of time to generic entry
+
+```{r, fig.height = 16, fig.width = 26, dpi = 200, echo = F, warning = F}
+
+# Define LOE bins
+first_generic_new[, LOE_bin := cut(
+  LOE,
+  breaks = c(0, 5, 10, 15, 20, 25, 30, Inf),
+  labels = c("0–5", "6–10", "11–15", "16–20", "21–25", "26–30", "30+"),
+  right = TRUE
+)]
+
+# Overall stacked bar (counts across bins)
+ggplot(first_generic_new, aes(x = LOE_bin)) +
+  geom_bar(fill = "steelblue") +
+  labs(
+    title = "Distribution of Time to First Generic Entry (Counts)",
+    x = "Years to First Generic (LOE)",
+    y = "Number of Drugs"
+  ) +
+  big_plot_theme()
+
+# By ATC Level 1 (stacked)
+ggplot(first_generic_new, aes(x = LOE_bin, fill = L1_name)) +
+  geom_bar(position = "stack") +
+  labs(
+    title = "Time to First Generic Entry by ATC Level 1 Class",
+    x = "Years to First Generic (LOE)",
+    y = "Number of Drugs",
+    fill = "ATC L1"
+  ) +
+  big_plot_theme() +
+  theme(legend.position = "bottom") +
+  guides(fill = guide_legend(nrow = 6, byrow = TRUE))
+
+```
+
+# Boxplots of median time to generic entry
+
+```{r, fig.width = 15, fig.height = 5, dpi = 200, echo = F, warning = F}
+# Make approval decade
+first_generic_new[, approval_decade := paste0(floor(year(b_fda_approval) / 10) * 10, "s")]
+
+# Function to make a horizontal white boxplot ordered by median LOE
+make_boxplot <- function(data, group_var, group_label) {
+  medians <- data[, .(med_LOE = median(LOE, na.rm = TRUE)), by = group_var]
+  medians <- medians[order(med_LOE)]
+  data[, (group_var) := factor(get(group_var), levels = medians[[group_var]])]
+  
+  ggplot(data, aes(x = get(group_var), y = LOE)) +
+    geom_boxplot(fill = "white", color = "black") +
+    coord_flip() +
+    labs(
+      title = paste("Median Time to First Generic Entry by", group_label),
+      x = group_label,
+      y = "Years to First Generic (LOE)"
+    ) +
+    theme_minimal(base_size = 16)
+}
+
+# 1) Overall (single box)
+ggplot(first_generic_new, aes(x = "", y = LOE)) +
+  geom_boxplot(fill = "white", color = "black") +
+  coord_flip() +
+  labs(
+    title = "Median Time to First Generic Entry (Overall)",
+    x = NULL,
+    y = "Years to First Generic (LOE)"
+  ) +
+  theme_minimal(base_size = 16)
+
+```
+
+```{r boxplot-sponsor, fig.width=15, fig.height=0.3 * length(unique(first_generic_new$b_fda_sponsor)), echo = F}
+# 2) By Brand Sponsor
+make_boxplot(first_generic_new, "b_fda_sponsor", "Brand Sponsor")
+
+```
+
+```{r boxplot-L1, fig.width=10, fig.height=0.5 * length(unique(first_generic_new$L1_name)), echo = FALSE}
+
+# 3) By ATC Level 1
+make_boxplot(first_generic_new, "L1_name", "ATC Level 1 Class")
+```
+
+```{r boxplot-decade, fig.width=10, fig.height=0.5 * length(unique(first_generic_new$approval_decade)), echo = F}
+# 4) By Approval Decade
+make_boxplot(first_generic_new, "approval_decade", "Approval Decade")
+```
