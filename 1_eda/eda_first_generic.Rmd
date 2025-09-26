@@ -6,8 +6,6 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-
 # ------------------------------------------------------------------------------
 
 pacman::p_load(readxl, data.table, dplyr, ggplot2, knitr, lubridate)
@@ -38,7 +36,6 @@ first_generic_agg <- read_excel(paste0(dir, 'First Generic Dates - New Ingredien
 first_generic_agg[, b_market_date := as.Date(b_market_date)]
 first_generic_agg[, first_date    := as.Date(first_date)]
 first_generic_agg[, LOE := as.numeric(difftime(first_date, b_market_date, units = "days")) / 365.25]
-
 
 # load new approvals (from FDA)
 # all_approvals <- fread(paste0(dir, 'raw/fda/final for posting compilation_of_cder_nme_and_new_biologic_approvals_1985-2024.csv'))

@@ -7,13 +7,15 @@
 
 pacman::p_load(readxl, data.table, dplyr)
 
+user_name = 'ms3390'
+
 # Directory
 if (Sys.info()["sysname"] == "Darwin") {
   # Mac
-  dir <- paste0("/Users/", user_name, "/Library/CloudStorage/Dropbox/Partners HealthCare Dropbox/Maitreyi Sahu/projects/generic_entry/data/")
+  dir <- paste0("/Users/", user_name, "/Library/CloudStorage/Dropbox/Partners HealthCare Dropbox/Maitreyi Sahu/projects/first_generics/data/")
 } else {
   # Windows
-  dir <- paste0("C:/Users/", user_name, "/Partners HealthCare Dropbox/Maitreyi Sahu/projects/generic_entry/data/")
+  dir <- paste0("C:/Users/", user_name, "/Partners HealthCare Dropbox/Maitreyi Sahu/projects/first_generics/data/")
 }
 
 # Load ATC

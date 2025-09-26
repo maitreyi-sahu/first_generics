@@ -2,9 +2,26 @@
 *.Rhistory
 *.RData
 
-# Rmarkdown
+# Quarto/RMarkdown cache and auxiliary files
+*_files/
+libs/ # for html dependencies
 *.html
 *.png
+*.pdf
+*.docx
+*.pptx
+.quarto/
+cache/
+*.aux
+*.out
+*.toc
+*.snm
+*.nav
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.synctex.gz
 
 # Logs
 *.log
